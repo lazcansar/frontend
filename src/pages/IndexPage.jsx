@@ -110,21 +110,45 @@ function DashboardPage() {
             }
         };
 
-        if (currentUser && currentUser.id) { // Kullanıcı bilgisi yüklendiyse veri çek
+        if (currentUser && currentUser.id) {
             loadData();
         } else {
-            // Kullanıcı bilgisi yoksa (örn. giriş yapılmamışsa) login'e yönlendirilebilir.
-            // navigate('/giris');
-            setIsLoading(false); // Veya yüklemeyi durdur
+            setIsLoading(false);
         }
     }, [currentUser]); // currentUser değiştiğinde (örn. login/logout) tekrar veri çek.
 
     const handleLogout = async () => {
         console.log('Çıkış yapılıyor...');
-        // Burada API'ye logout isteği atılabilir: await fetch('/api/logout', { method: 'POST' });
-        // Auth token'ı temizle (localStorage, context vs.)
-        // setCurrentUser(null); // Kullanıcı state'ini sıfırla (eğer lokal state ise)
-        navigate('/'); // Giriş sayfasına yönlendir
+
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            try {
+                const response = await fetch('http://localhost:5293/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(data.message || 'Sunucu tarafı çıkış başarılı.');
+                } else {
+                    console.error('Sunucu tarafı çıkış işlemi başarısız oldu. Durum:', response.status);
+                }
+            } catch (error) {
+                console.error('Logout API çağrısı sırasında bir ağ hatası veya başka bir sorun oluştu:', error);
+            }
+        } else {
+            console.log('Saklanmış bir token bulunamadı, sadece istemci tarafı çıkış yapılıyor.');
+        }
+
+        localStorage.removeItem('authToken');
+        console.log('İstemci tarafı temizlik tamamlandı.');
+
+        navigate('/');
     };
 
     // Veri yüklenirken veya kullanıcı yoksa gösterilecek içerik
