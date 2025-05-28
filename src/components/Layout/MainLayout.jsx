@@ -1,5 +1,9 @@
 import React, { useEffect } from 'react';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import { useNavigate, Link } from 'react-router-dom';
+
+
+
 const MainLayout = ({ children, pageTitle = "Sayfa Başlığı", pageDescription = "Varsayılan açıklama." }) => {
     useEffect(() => {
         document.title = `${pageTitle} - Personel Tayin Talebi Uygulaması`;
@@ -28,9 +32,9 @@ const MainLayout = ({ children, pageTitle = "Sayfa Başlığı", pageDescription
                                     style={{ height: '75px' }}
                                 />
                                 {/* React Router kullanıyorsanız <Link to="/"> kullanın */}
-                                <a href="/public">
+                                <Link to="/">
                                     <h1 className="text-3xl text-red-600 font-semibold">Personel Genel Müdürlüğü</h1>
-                                </a>
+                                </Link>
                             </div>
                             <div className="social flex flex-row gap-3">
                                 <a href="https://www.instagram.com/adaletpgm/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-200">

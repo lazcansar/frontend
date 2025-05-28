@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import MainLayout from '../components/Layout/MainLayout'; // MainLayout'u import ediyoruz
 import { useNavigate } from 'react-router-dom';
 
+
 function LoginPage() {
     const [personnelNumber, setPersonnelNumber] = useState('');
     const [password, setPassword] = useState('');
     const [errors, setErrors] = useState([]);
     const [successMessage, setSuccessMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    const navigate = useNavigate();
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -23,7 +22,6 @@ function LoginPage() {
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    // 'X-XSRF-TOKEN': getCookie('XSRF-TOKEN'), // CSRF token (Laravel Sanctum vb. için)
                 },
                 body: JSON.stringify({
                     personnel_number: personnelNumber,
@@ -47,10 +45,6 @@ function LoginPage() {
 
             setSuccessMessage(data.message || 'Giriş başarılı! Yönlendiriliyorsunuz...');
             setIsLoading(false);
-            // Token saklama, kullanıcı durumunu güncelleme vb.
-            // localStorage.setItem('authToken', data.token);
-            // setTimeout(() => navigate('/dashboard'), 1000);
-
         } catch (error) {
             console.error('Login error:', error);
             setErrors(['Ağ hatası veya sunucuyla iletişim kurulamadı.']);
@@ -59,9 +53,7 @@ function LoginPage() {
     };
 
     return (
-        // MainLayout bileşenini burada kullanıyoruz ve sayfa başlığını prop olarak geçiyoruz
         <MainLayout pageTitle="Giriş Paneli" pageDescription="Personel tayin talebi uygulaması giriş ekranı.">
-            {/* LoginPage'in asıl içeriği MainLayout'un children'ı olarak render edilecek */}
             <section className="w-full bg-sky-800 py-4 px-4 lg:px-0">
                 <div className="container mx-auto">
                     <h1 className="text-white text-2xl text-center">Personel Tayin Talep Ekranı</h1>
