@@ -17,15 +17,15 @@ function LoginPage() {
         setSuccessMessage('');
 
         try {
-            const response = await fetch('/api/login', { // Örnek API endpoint'i
+            const response = await fetch('http://localhost:5293/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                 },
                 body: JSON.stringify({
-                    personnel_number: personnelNumber,
-                    password: password,
+                    PersonnelNumber: personnelNumber,
+                    Password: password,
                 }),
             });
 
