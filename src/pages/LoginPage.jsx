@@ -10,6 +10,8 @@ function LoginPage() {
     const [successMessage, setSuccessMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const navigate = useNavigate();
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         setIsLoading(true);
@@ -45,6 +47,14 @@ function LoginPage() {
 
             setSuccessMessage(data.message || 'Giriş başarılı! Yönlendiriliyorsunuz...');
             setIsLoading(false);
+            if (data.token) {
+                localStorage.setItem('authToken', data.token);
+            }
+            setTimeout(() => {
+                navigate('/personel-ekrani');
+            }, 1000); // 1 saniye sonra yönlendir
+
+
         } catch (error) {
             console.error('Login error:', error);
             setErrors(['Ağ hatası veya sunucuyla iletişim kurulamadı.']);
