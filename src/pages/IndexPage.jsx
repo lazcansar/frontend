@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import MainLayout from '../components/Layout/MainLayout';
-import { Link, useNavigate } from 'react-router-dom';
+import {Link, useNavigate} from 'react-router-dom';
 
 // API çağrısı için örnek fonksiyon (Admin için)
 const fetchAdminDashboardData = async (token) => {
@@ -15,17 +15,31 @@ const fetchAdminDashboardData = async (token) => {
     // Şimdilik örnek veri:
     return {
         tickets: [
-            { id: 1, user_id: 'guid-user-2', changetype: 'İl İçi', city_id: 6, message: 'Ankara merkez birimlerine tayin talebi.', created_at: '2024-05-27 10:00:00' },
-            { id: 2, user_id: 'guid-user-3', changetype: 'İl Dışı', city_id: 34, message: 'İstanbul Adliyesi için tayin istiyorum.', created_at: '2024-05-26 14:30:00' },
+            {
+                id: 1,
+                user_id: 'guid-user-2',
+                changetype: 'İl İçi',
+                city_id: 6,
+                message: 'Ankara merkez birimlerine tayin talebi.',
+                created_at: '2024-05-27 10:00:00'
+            },
+            {
+                id: 2,
+                user_id: 'guid-user-3',
+                changetype: 'İl Dışı',
+                city_id: 34,
+                message: 'İstanbul Adliyesi için tayin istiyorum.',
+                created_at: '2024-05-26 14:30:00'
+            },
         ],
         users: [ // Bu kullanıcı listesi adminin göreceği diğer kullanıcılar
-            { id: 'guid-admin-1', name: 'Yönetici Adı', sicil_no: '001' },
-            { id: 'guid-user-2', name: 'Ahmet Yılmaz', sicil_no: '1001' },
-            { id: 'guid-user-3', name: 'Ayşe Kaya', sicil_no: '1002' },
+            {id: 'guid-admin-1', name: 'Yönetici Adı', sicil_no: '001'},
+            {id: 'guid-user-2', name: 'Ahmet Yılmaz', sicil_no: '1001'},
+            {id: 'guid-user-3', name: 'Ayşe Kaya', sicil_no: '1002'},
         ],
         cities: [
-            { id: 6, name: 'Ankara' },
-            { id: 34, name: 'İstanbul' },
+            {id: 6, name: 'Ankara'},
+            {id: 34, name: 'İstanbul'},
         ],
     };
 };
@@ -44,7 +58,7 @@ const fetchCurrentUserProfile = async (token) => {
             // Yetkisiz erişim, token geçersiz olabilir
             throw new Error('Unauthorized');
         }
-        const errorData = await response.json().catch(() => ({ message: 'Profil bilgileri alınırken bir hata oluştu.' }));
+        const errorData = await response.json().catch(() => ({message: 'Profil bilgileri alınırken bir hata oluştu.'}));
         throw new Error(errorData.message || 'Profil bilgileri alınamadı.');
     }
     return await response.json();
@@ -53,7 +67,7 @@ const fetchCurrentUserProfile = async (token) => {
 
 function DashboardPage() {
     const [currentUser, setCurrentUser] = useState(null); // Başlangıçta null
-    const [adminData, setAdminData] = useState({ tickets: [], users: [], cities: [] });
+    const [adminData, setAdminData] = useState({tickets: [], users: [], cities: []});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
@@ -149,7 +163,8 @@ function DashboardPage() {
         return (
             <MainLayout pageTitle="Hata">
                 <div className="container mx-auto text-center py-20 text-red-500">
-                    {error} Lütfen <Link to="/" className="text-sky-600 hover:underline">tekrar giriş yapmayı</Link> deneyin.
+                    {error} Lütfen <Link to="/" className="text-sky-600 hover:underline">tekrar giriş
+                    yapmayı</Link> deneyin.
                 </div>
             </MainLayout>
         );
@@ -164,7 +179,8 @@ function DashboardPage() {
         return (
             <MainLayout pageTitle="Giriş Gerekli">
                 <div className="container mx-auto text-center py-20">
-                    Bu sayfayı görüntülemek için lütfen <Link to="/" className="text-sky-600 hover:underline">giriş yapın</Link>.
+                    Bu sayfayı görüntülemek için lütfen <Link to="/" className="text-sky-600 hover:underline">giriş
+                    yapın</Link>.
                 </div>
             </MainLayout>
         );
@@ -195,12 +211,12 @@ function DashboardPage() {
     const formatDate = (dateString) => {
         if (!dateString) return '';
         try {
-            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            const options = {year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'};
             // API'den gelen tarih "yyyy-MM-dd" formatında ise saat bilgisi olmaz.
             // Eğer saat bilgisi de varsa ve farklı formatta geliyorsa new Date() parse etmeyebilir.
             // Sadece tarih için:
             if (dateString.length === 10) { // "yyyy-MM-dd"
-                const dateOnlyOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+                const dateOnlyOptions = {year: 'numeric', month: 'long', day: 'numeric'};
                 return new Date(dateString + 'T00:00:00').toLocaleDateString('tr-TR', dateOnlyOptions); // Saat ekleyerek parse et
             }
             return new Date(dateString).toLocaleDateString('tr-TR', options);
@@ -235,18 +251,34 @@ function DashboardPage() {
             {isUserAdmin && (
                 <section className="my-8">
                     <div className="container mx-auto">
-                        {error && adminData.tickets.length === 0 && <div className="text-red-500 p-4 bg-red-100 rounded mb-4">Admin verileri yüklenirken hata oluştu: {error}</div>}
+                        {error && adminData.tickets.length === 0 &&
+                            <div className="text-red-500 p-4 bg-red-100 rounded mb-4">Admin verileri yüklenirken hata
+                                oluştu: {error}</div>}
                         <div className="border border-gray-200 shadow p-4 rounded">
                             <h2 className="text-xl p-4 bg-sky-600 text-white rounded mb-4">Tüm Tayin Talepleri</h2>
                             <div className="overflow-x-auto shadow-md sm:rounded-lg">
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-sky-500">
                                     <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Talep Eden</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Talep Türü</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Tayin İstenen Şehir</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Mesaj</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Talep Tarihi</th>
+                                        <th scope="col"
+                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Talep
+                                            Eden
+                                        </th>
+                                        <th scope="col"
+                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Talep
+                                            Türü
+                                        </th>
+                                        <th scope="col"
+                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Tayin
+                                            İstenen Şehir
+                                        </th>
+                                        <th scope="col"
+                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Mesaj
+                                        </th>
+                                        <th scope="col"
+                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Talep
+                                            Tarihi
+                                        </th>
                                     </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -254,21 +286,26 @@ function DashboardPage() {
                                         adminData.tickets.map((ticket) => (
                                             <tr key={ticket.id}>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900 capitalize">{getUserNameById(ticket.user_id)}</div>
+                                                    <div
+                                                        className="text-sm text-gray-900 capitalize">{getUserNameById(ticket.user_id)}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900 capitalize">{ticket.changetype}</div>
+                                                    <div
+                                                        className="text-sm text-gray-900 capitalize">{ticket.changetype}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">{getCityNameById(ticket.city_id)}</div>
+                                                    <div
+                                                        className="text-sm text-gray-900">{getCityNameById(ticket.city_id)}</div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div className="text-sm text-gray-700 max-w-xs truncate" title={ticket.message}>
+                                                    <div className="text-sm text-gray-700 max-w-xs truncate"
+                                                         title={ticket.message}>
                                                         {ticket.message}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">{formatDate(ticket.created_at)}</div>
+                                                    <div
+                                                        className="text-sm text-gray-900">{formatDate(ticket.created_at)}</div>
                                                 </td>
                                             </tr>
                                         ))
@@ -297,7 +334,8 @@ function DashboardPage() {
                                 <div className="flex flex-row flex-wrap -m-2 text-gray-800">
                                     <div className="w-full md:w-1/2 p-2">
                                         <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>Ad Soyad:</strong> {currentUser.profile.firstName} {currentUser.profile.lastName}
+                                            <strong>Ad
+                                                Soyad:</strong> {currentUser.profile.firstName} {currentUser.profile.lastName}
                                         </div>
                                     </div>
                                     <div className="w-full md:w-1/2 p-2">
@@ -337,7 +375,8 @@ function DashboardPage() {
                                     </div>
                                     <div className="w-full md:w-1/2 p-2">
                                         <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>İşe Başlama Tarihi:</strong> {formatDate(currentUser.profile.startYear)}
+                                            <strong>İşe Başlama
+                                                Tarihi:</strong> {formatDate(currentUser.profile.startYear)}
                                         </div>
                                     </div>
                                 </div>
