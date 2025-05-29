@@ -41,31 +41,35 @@ const fetchCities = async () => {
     }
 };
 
-const fetchUserTickets = async (userId, token) => { // Token eklendi, eğer API yetkilendirme gerektiriyorsa
+const fetchUserTickets = async (userId, token) => {
     // Gerçek API çağrısı
-    // const response = await fetch(`http://localhost:5293/api/tickets/user/${userId}`, { // Örnek API endpoint
-    //     headers: {
-    //         'Authorization': `Bearer ${token}`,
-    //         'Content-Type': 'application/json',
-    //     }
-    // });
-    // if (!response.ok) {
-    //     const errorData = await response.json().catch(() => ({ message: 'Geçmiş talepler alınamadı.'}));
-    //     throw new Error(errorData.message || 'Geçmiş talepler çekilirken bir hata oluştu.');
-    // }
-    // const data = await response.json();
-    // return data.data || []; // API'nizin yapısına göre ayarlayın (örn: { success: true, data: [...] })
-
-    // Şimdilik örnek veri (currentUser.id'ye göre filtreleme yapabiliriz, ama API bunu yapmalı)
-    console.log("Fetching tickets for user ID:", userId);
-    const allTickets = [
-        { id: 1, user_id: 'FFC6B8FE-D2AC-41EA-AC2A-FD65AE31C600', changetype: 'İl İçi', city_id: 90, message: 'Ankara merkez birimlerine tayin talebi.', created_at: '2024-05-27 10:00:00' },
-        { id: 3, user_id: 'FFC6B8FE-D2AC-41EA-AC2A-FD65AE31C600', changetype: 'İl Dışı', city_id: 100, message: 'İzmir Adliyesi için tayin istiyorum.', created_at: '2024-05-20 09:00:00' },
-        { id: 4, user_id: 'ANOTHER-USER-GUID', changetype: 'İl İçi', city_id: 120, message: 'Başka kullanıcı talebi.', created_at: '2024-05-10 09:00:00' },
-    ];
-    // API'den gelen kullanıcı ID'si büyük/küçük harf duyarlı olabilir, bu yüzden karşılaştırmayı dikkatli yapın.
-    // Genellikle GUID'ler harf duyarsız karşılaştırılır.
-    return allTickets.filter(ticket => ticket.user_id.toLowerCase() === userId.toLowerCase());
+    // API endpoint'inizin /api/tickets/user/{userId} olduğunu varsayıyoruz
+    const response = await fetch(`http://localhost:5293/api/tickets/user/${userId}`, { // API adresinizi kontrol edin
+        headers: {
+            'Authorization': `Bearer ${token}`, // Token gerekiyorsa
+            'Content-Type': 'application/json',
+        }
+    });
+    if (!response.ok) {
+        let errorData = { message: 'Geçmiş talepler alınamadı.' };
+        try {
+            errorData = await response.json();
+        } catch (e) {
+            console.error("Geçmiş talepler API yanıtı JSON formatında değil veya parse edilemedi.", e);
+        }
+        throw new Error(errorData.message || 'Geçmiş talepler çekilirken bir hata oluştu.');
+    }
+    const result = await response.json();
+    // API'den gelen data'nın TicketDto[] formatında olduğunu varsayıyoruz.
+    // TicketsController'ınız { success: true, data: [...], message: "..." } şeklinde bir yapı döndürüyor.
+    if (result.success && Array.isArray(result.data)) {
+        return result.data;
+    } else {
+        // Eğer result.data null veya undefined ise boş dizi döndür,
+        // değilse ve array değilse veya success false ise hata fırlat.
+        if (result.data === null || typeof result.data === 'undefined') return [];
+        throw new Error(result.message || 'Geçmiş talep verileri beklenen formatta değil.');
+    }
 };
 
 const submitTicket = async (ticketData, token) => {
