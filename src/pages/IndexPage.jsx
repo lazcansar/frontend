@@ -1,48 +1,100 @@
 import React, {useState, useEffect} from 'react';
 import MainLayout from '../components/Layout/MainLayout';
-import {Link, useNavigate} from 'react-router-dom';
+import {Link, useNavigate}from 'react-router-dom';
 
-// API çağrısı için örnek fonksiyon (Admin için)
-const fetchAdminDashboardData = async (token) => {
-    // Bu fonksiyonu kendi API yapınıza göre doldurun
-    // Örnek:
-    // const response = await fetch('/api/admin/dashboard-summary', {
-    //     headers: { 'Authorization': `Bearer ${token}` }
-    // });
-    // if (!response.ok) throw new Error('Admin verileri alınamadı');
-    // return await response.json();
-
-    // Şimdilik örnek veri:
-    return {
-        tickets: [
-            {
-                id: 1,
-                user_id: 'guid-user-2',
-                changetype: 'İl İçi',
-                city_id: 6,
-                message: 'Ankara merkez birimlerine tayin talebi.',
-                created_at: '2024-05-27 10:00:00'
-            },
-            {
-                id: 2,
-                user_id: 'guid-user-3',
-                changetype: 'İl Dışı',
-                city_id: 34,
-                message: 'İstanbul Adliyesi için tayin istiyorum.',
-                created_at: '2024-05-26 14:30:00'
-            },
-        ],
-        users: [ // Bu kullanıcı listesi adminin göreceği diğer kullanıcılar
-            {id: 'guid-admin-1', name: 'Yönetici Adı', sicil_no: '001'},
-            {id: 'guid-user-2', name: 'Ahmet Yılmaz', sicil_no: '1001'},
-            {id: 'guid-user-3', name: 'Ayşe Kaya', sicil_no: '1002'},
-        ],
-        cities: [
-            {id: 6, name: 'Ankara'},
-            {id: 34, name: 'İstanbul'},
-        ],
-    };
+// Şehirleri getiren fonksiyon
+const fetchCities = async (token) => {
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch('http://localhost:5293/api/City/city', { headers });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Şehirler çekilirken API hatası.'}));
+            throw new Error(errorData.message || 'Şehirler çekilirken bir hata oluştu.');
+        }
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+            return result.data;
+        } else {
+            throw new Error(result.message || 'Şehir verileri beklenen formatta değil veya boş.');
+        }
+    } catch (error) {
+        console.error("Şehirleri çekerken bir hata oluştu:", error);
+        throw error;
+    }
 };
+
+// Sadece tüm biletleri getiren fonksiyon
+const fetchAllTicketsForAdmin = async (token) => {
+    const response = await fetch('http://localhost:5293/api/tickets/admin/all', {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    });
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error('Unauthorized');
+        }
+        let errorData = { message: 'Yönetici bilet verileri alınamadı.' };
+        try {
+            errorData = await response.json();
+        } catch (e) {
+            console.error("Yönetici bilet API yanıtı JSON formatında değil veya parse edilemedi.", e);
+        }
+        throw new Error(errorData.message || 'Yönetici bilet verileri çekilirken bir hata oluştu.');
+    }
+
+    const result = await response.json();
+
+    if (result.success && Array.isArray(result.data)) {
+        return result.data;
+    } else {
+        throw new Error(result.message || 'Yönetici bilet verileri beklenen formatta değil.');
+    }
+};
+
+// Tüm kullanıcıları getiren fonksiyon (API'ye bağlandı)
+const fetchAllUsersForAdmin = async (token) => {
+    const response = await fetch('http://localhost:5293/api/users/admin/all', { // API endpoint'i
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    });
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error('Unauthorized'); // Yetkisiz erişim
+        }
+        let errorData = { message: 'Kullanıcı listesi alınamadı.' };
+        try {
+            errorData = await response.json();
+        } catch (e) {
+            console.error("Kullanıcı listesi API yanıtı JSON formatında değil veya parse edilemedi.", e);
+        }
+        throw new Error(errorData.message || 'Kullanıcı listesi çekilirken bir hata oluştu.');
+    }
+
+    const result = await response.json(); // API'den { success: true, data: [userProfileDtos_array] } bekleniyor
+
+    if (result.success && Array.isArray(result.data)) {
+        // API'den gelen userProfileDto'lar, user.id, user.profile.firstName, user.profile.lastName
+        // ve user.personnelNumber (sicilNo için) gibi alanları içermelidir.
+        return result.data;
+    } else {
+        throw new Error(result.message || 'Kullanıcı verileri beklenen formatta değil.');
+    }
+};
+
 
 // Giriş yapmış kullanıcının kendi bilgilerini getiren API çağrısı
 const fetchCurrentUserProfile = async (token) => {
@@ -55,7 +107,6 @@ const fetchCurrentUserProfile = async (token) => {
     });
     if (!response.ok) {
         if (response.status === 401) {
-            // Yetkisiz erişim, token geçersiz olabilir
             throw new Error('Unauthorized');
         }
         const errorData = await response.json().catch(() => ({message: 'Profil bilgileri alınırken bir hata oluştu.'}));
@@ -66,7 +117,7 @@ const fetchCurrentUserProfile = async (token) => {
 
 
 function DashboardPage() {
-    const [currentUser, setCurrentUser] = useState(null); // Başlangıçta null
+    const [currentUser, setCurrentUser] = useState(null);
     const [adminData, setAdminData] = useState({tickets: [], users: [], cities: []});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -76,7 +127,7 @@ function DashboardPage() {
         const token = localStorage.getItem('authToken');
         if (!token) {
             console.log('Token bulunamadı, giriş sayfasına yönlendiriliyor.');
-            navigate('/'); // Token yoksa giriş sayfasına yönlendir
+            navigate('/');
             return;
         }
 
@@ -85,18 +136,21 @@ function DashboardPage() {
             setError(null);
             try {
                 const userProfileData = await fetchCurrentUserProfile(token);
-                setCurrentUser(userProfileData); // API'den gelen kullanıcı bilgisi
+                setCurrentUser(userProfileData);
 
-                // API'den gelen rol string ("Admin", "Personel")
-                // Frontend'de rolü 0 ve 1 olarak kullanıyorsanız burada dönüşüm yapabilirsiniz
-                // Veya API'nin sayısal rol dönmesini sağlayabilirsiniz.
-                // Şimdilik API'den gelen string role göre kontrol yapalım.
                 if (userProfileData.role === 'Admin') {
-                    const data = await fetchAdminDashboardData(token);
-                    setAdminData(data);
-                }
-                // Personel için ek bir veri çekmeye gerek yok, userProfileData zaten kendi bilgileri.
+                    const [ticketsData, citiesData, usersData] = await Promise.all([
+                        fetchAllTicketsForAdmin(token),
+                        fetchCities(token),
+                        fetchAllUsersForAdmin(token)    // Artık API'den gerçek kullanıcıları çekecek
+                    ]);
 
+                    setAdminData({
+                        tickets: ticketsData || [],
+                        cities: citiesData || [],
+                        users: usersData || [] // API'den gelen kullanıcı listesi
+                    });
+                }
             } catch (err) {
                 if (err.message === 'Unauthorized') {
                     console.error('Yetkisiz erişim veya token geçersiz. Çıkış yapılıyor ve giriş sayfasına yönlendiriliyor.');
@@ -112,7 +166,7 @@ function DashboardPage() {
         };
 
         loadData();
-    }, [navigate]); // navigate dependency array'de olmalı
+    }, [navigate]);
 
     const handleLogout = async () => {
         console.log('Çıkış yapılıyor...');
@@ -120,7 +174,7 @@ function DashboardPage() {
 
         if (token) {
             try {
-                const response = await fetch('http://localhost:5293/api/auth/logout', { // API adresinizi doğrulayın
+                const response = await fetch('http://localhost:5293/api/auth/logout', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -134,20 +188,18 @@ function DashboardPage() {
                     console.log(data.message || 'Sunucu tarafı çıkış başarılı.');
                 } else {
                     console.error('Sunucu tarafı çıkış işlemi başarısız oldu. Durum:', response.status);
-                    // Hata olsa bile istemci tarafı temizliği yap
                 }
             } catch (error) {
                 console.error('Logout API çağrısı sırasında bir ağ hatası veya başka bir sorun oluştu:', error);
-                // Hata olsa bile istemci tarafı temizliği yap
             }
         } else {
             console.log('Saklanmış bir token bulunamadı, sadece istemci tarafı çıkış yapılıyor.');
         }
 
         localStorage.removeItem('authToken');
-        setCurrentUser(null); // Kullanıcı state'ini temizle
+        setCurrentUser(null);
         console.log('İstemci tarafı temizlik tamamlandı.');
-        navigate('/'); // Ana sayfaya veya giriş sayfasına yönlendir
+        navigate('/');
     };
 
     if (isLoading) {
@@ -158,7 +210,6 @@ function DashboardPage() {
         );
     }
 
-    // currentUser yüklenmeden önce hata oluştuysa veya kullanıcı yoksa (useEffect yönlendirmesi sonrası bir anlık durum)
     if (error && !currentUser) {
         return (
             <MainLayout pageTitle="Hata">
@@ -170,12 +221,7 @@ function DashboardPage() {
         );
     }
 
-    // currentUser null ise (henüz yüklenmemiş veya yüklenememişse ve token yoksa useEffect zaten yönlendirir)
-    // Bu kontrol genellikle AuthContext ile daha merkezi yönetilir.
     if (!currentUser) {
-        // Bu durum, token var ama kullanıcı bilgisi çekilemediyse veya
-        // useEffect içindeki navigate('/') henüz render döngüsünü tamamlamadıysa görülebilir.
-        // Genellikle isLoading true iken bu bloğa girilmez.
         return (
             <MainLayout pageTitle="Giriş Gerekli">
                 <div className="container mx-auto text-center py-20">
@@ -186,38 +232,47 @@ function DashboardPage() {
         );
     }
 
-    // Hata varsa ve kullanıcı bilgisi de varsa (örneğin admin verisi çekilirken hata oldu)
-    if (error && currentUser) {
-        // Sadece admin verisi çekilirken hata olduysa, personel kendi bilgilerini görebilir.
-        // Bu durumu daha spesifik yönetmek isteyebilirsiniz.
-        // Şimdilik genel bir hata mesajı gösterelim.
-        console.warn("Veri yükleme hatası (currentUser mevcut):", error);
+    if (error && currentUser.role === 'Admin' && (!adminData.tickets.length || !adminData.cities.length || !adminData.users.length) ) {
+        console.warn("Admin verileri (biletler, şehirler veya kullanıcılar) yüklenirken hata oluştu:", error);
     }
 
-
-    // Admin tablosu için yardımcı fonksiyonlar (API'den gelen user_id string ise ona göre ayarlandı)
     const getUserNameById = (userId) => {
-        if (!adminData || !adminData.users) return 'Bilinmeyen Kullanıcı';
-        const user = adminData.users.find(u => u.id === userId); // API'den gelen user_id string ise === ile karşılaştır
-        return user ? user.name : 'Bilinmeyen Kullanıcı';
+        if (!adminData || !adminData.users || adminData.users.length === 0) return 'Bilinmeyen Kullanıcı';
+        const user = adminData.users.find(u => u.id === userId);
+        if (user) {
+            // API'den gelen UserProfileDto'da Profile.FirstName ve Profile.LastName var.
+            // user.name alanı olmayabilir, bu yüzden profile içinden alıyoruz.
+            if (user.profile && user.profile.firstName) {
+                return `${user.profile.firstName} ${user.profile.lastName || ''}`.trim();
+            }
+            // Eğer API'den gelen UserProfileDto'da doğrudan 'name' alanı varsa (fetchAllUsersForAdmin mock'taki gibi)
+            // ve 'profile' yoksa veya boşsa, bunu kullanabiliriz.
+            // Ancak API'miz UserProfileDto döndürdüğü için 'profile' içinden almak daha tutarlı.
+            // if (user.name && user.name.trim() !== '') return user.name;
+
+            // Fallback olarak sicil numarası (personnelNumber) veya kullanıcı adı (userName) gösterilebilir.
+            // API'niz UserProfileDto'da personnelNumber alanını sicil no için kullanıyor.
+            if (user.personnelNumber) return user.personnelNumber;
+
+            return `Kullanıcı (${userId.substring(0, 6)}...)`; // Son çare
+        }
+        return `Bilinmeyen Kullanıcı (${userId.substring(0, 6)}...)`;
     };
 
     const getCityNameById = (cityId) => {
-        if (!adminData || !adminData.cities) return 'Bilinmeyen Şehir';
-        const city = adminData.cities.find(c => c.id === cityId);
-        return city ? city.name : 'Bilinmeyen Şehir';
+        if (!adminData || !adminData.cities || adminData.cities.length === 0) return 'Bilinmeyen Şehir';
+        const numericCityId = typeof cityId === 'string' ? parseInt(cityId, 10) : cityId;
+        const city = adminData.cities.find(c => c.id === numericCityId);
+        return city ? city.name : `Şehir ID: ${cityId}`;
     };
 
     const formatDate = (dateString) => {
         if (!dateString) return '';
         try {
             const options = {year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'};
-            // API'den gelen tarih "yyyy-MM-dd" formatında ise saat bilgisi olmaz.
-            // Eğer saat bilgisi de varsa ve farklı formatta geliyorsa new Date() parse etmeyebilir.
-            // Sadece tarih için:
-            if (dateString.length === 10) { // "yyyy-MM-dd"
+            if (dateString.length === 10 && !dateString.includes('T')) {
                 const dateOnlyOptions = {year: 'numeric', month: 'long', day: 'numeric'};
-                return new Date(dateString + 'T00:00:00').toLocaleDateString('tr-TR', dateOnlyOptions); // Saat ekleyerek parse et
+                return new Date(dateString + 'T00:00:00Z').toLocaleDateString('tr-TR', dateOnlyOptions);
             }
             return new Date(dateString).toLocaleDateString('tr-TR', options);
         } catch (e) {
@@ -226,16 +281,16 @@ function DashboardPage() {
         }
     };
 
-    // Rol kontrolü API'den gelen string değere göre yapılıyor
     const isUserAdmin = currentUser.role === 'Admin';
 
     return (
         <MainLayout pageTitle={isUserAdmin ? 'Yönetici Paneli' : 'Kişisel Bilgilerim'}>
             <section className="bg-sky-800 py-4 px-4 lg:px-0">
                 <div className="container mx-auto">
-                    <div className="flex flex-row items-center justify-between">
-                        <h1 className="text-white text-2xl">
-                            {isUserAdmin ? `Yönetici Ekranı (${currentUser.profile?.firstName || currentUser.personnelNumber})` : `Personel Ekranı (${currentUser.profile?.firstName || currentUser.personnelNumber})`}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+                        <h1 className="text-white text-xl md:text-2xl text-center sm:text-left">
+                            {isUserAdmin ? `Yönetici Ekranı (${currentUser.profile?.firstName || currentUser.personnelNumber || currentUser.userName || 'Yönetici'})`
+                                : `Personel Ekranı (${currentUser.profile?.firstName || currentUser.personnelNumber || currentUser.userName || 'Personel'})`}
                         </h1>
                         <button
                             onClick={handleLogout}
@@ -247,72 +302,66 @@ function DashboardPage() {
                 </div>
             </section>
 
-            {/* Yönetici İçeriği */}
-            {isUserAdmin && (
+            {error && (!isUserAdmin || (isUserAdmin && (!adminData.tickets.length || !adminData.cities.length || !adminData.users.length))) && (
                 <section className="my-8">
                     <div className="container mx-auto">
-                        {error && adminData.tickets.length === 0 &&
-                            <div className="text-red-500 p-4 bg-red-100 rounded mb-4">Admin verileri yüklenirken hata
-                                oluştu: {error}</div>}
-                        <div className="border border-gray-200 shadow p-4 rounded">
-                            <h2 className="text-xl p-4 bg-sky-600 text-white rounded mb-4">Tüm Tayin Talepleri</h2>
-                            <div className="overflow-x-auto shadow-md sm:rounded-lg">
+                        <div className="text-red-700 p-4 bg-red-100 border border-red-400 rounded mb-4">
+                            <strong>Hata:</strong> {error} Lütfen daha sonra tekrar deneyin veya sistem yöneticisi ile iletişime geçin.
+                        </div>
+                    </div>
+                </section>
+            )}
+
+
+            {isUserAdmin && !error && (
+                <section className="my-8">
+                    <div className="container mx-auto">
+                        <div className="border border-gray-200 shadow-lg p-4 sm:p-6 rounded-lg">
+                            <h2 className="text-xl font-semibold p-4 bg-sky-600 text-white rounded-t-lg mb-0">Tüm Tayin Talepleri</h2>
+                            <div className="overflow-x-auto shadow-md sm:rounded-b-lg">
                                 <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-sky-500">
+                                    <thead className="bg-gray-100">
                                     <tr>
                                         <th scope="col"
-                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Talep
-                                            Eden
-                                        </th>
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Talep Eden</th>
                                         <th scope="col"
-                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Talep
-                                            Türü
-                                        </th>
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Talep Türü</th>
                                         <th scope="col"
-                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Tayin
-                                            İstenen Şehir
-                                        </th>
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tayin İstenen Şehir</th>
                                         <th scope="col"
-                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Mesaj
-                                        </th>
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mesaj</th>
                                         <th scope="col"
-                                            className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Talep
-                                            Tarihi
-                                        </th>
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Talep Tarihi</th>
                                     </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
                                     {adminData.tickets && adminData.tickets.length > 0 ? (
                                         adminData.tickets.map((ticket) => (
-                                            <tr key={ticket.id}>
+                                            <tr key={ticket.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div
-                                                        className="text-sm text-gray-900 capitalize">{getUserNameById(ticket.user_id)}</div>
+                                                    {/* Kullanıcı adını göstermek için getUserNameById kullanılıyor */}
+                                                    <div className="text-sm text-gray-900 capitalize">{getUserNameById(ticket.user_id)}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div
-                                                        className="text-sm text-gray-900 capitalize">{ticket.changetype}</div>
+                                                    <div className="text-sm text-gray-900 capitalize">{ticket.changetype}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div
-                                                        className="text-sm text-gray-900">{getCityNameById(ticket.city_id)}</div>
+                                                    <div className="text-sm text-gray-900">{getCityNameById(ticket.city_id)}</div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div className="text-sm text-gray-700 max-w-xs truncate"
-                                                         title={ticket.message}>
+                                                    <div className="text-sm text-gray-700 max-w-xs truncate hover:whitespace-normal hover:overflow-visible" title={ticket.message}>
                                                         {ticket.message}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div
-                                                        className="text-sm text-gray-900">{formatDate(ticket.created_at)}</div>
+                                                    <div className="text-sm text-gray-900">{formatDate(ticket.created_at)}</div>
                                                 </td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
                                             <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                                                Gösterilecek talep bulunamadı.
+                                                {isLoading ? 'Yükleniyor...' : (error && adminData.tickets.length === 0 ? 'Veri yüklenirken hata oluştu.' : 'Gösterilecek tayin talebi bulunamadı.')}
                                             </td>
                                         </tr>
                                     )}
@@ -324,78 +373,42 @@ function DashboardPage() {
                 </section>
             )}
 
-            {/* Personel İçeriği (Her zaman gösterilir, çünkü currentUser kendi bilgileridir) */}
-            {currentUser.profile && ( // currentUser.profile API'den geliyorsa kontrol et
+            {currentUser.profile && (
                 <>
                     <section className="my-8">
                         <div className="container mx-auto">
-                            <div className="border border-gray-200 shadow p-4 rounded">
-                                <h2 className="text-xl p-4 bg-sky-500 text-white rounded mb-4">Personel Bilgileri</h2>
-                                <div className="flex flex-row flex-wrap -m-2 text-gray-800">
-                                    <div className="w-full md:w-1/2 p-2">
-                                        <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>Ad
-                                                Soyad:</strong> {currentUser.profile.firstName} {currentUser.profile.lastName}
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-1/2 p-2">
-                                        <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>Sicil No:</strong> {currentUser.personnelNumber}
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-1/2 p-2">
-                                        <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>E-Mail:</strong> {currentUser.email}
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-1/2 p-2">
-                                        <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>Telefon Numarası:</strong> {currentUser.profile.phone}
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-1/2 p-2">
-                                        <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>Çalıştığı Kurum:</strong> {currentUser.profile.company}
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-1/2 p-2">
-                                        <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>İkamet Adresi:</strong> {currentUser.profile.address}
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-1/2 p-2">
-                                        <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>Yıllık İzin:</strong> {currentUser.profile.vac}
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-1/2 p-2">
-                                        <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>Kadro / Derece:</strong> {currentUser.profile.kadro}
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-1/2 p-2">
-                                        <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>İşe Başlama
-                                                Tarihi:</strong> {formatDate(currentUser.profile.startYear)}
-                                        </div>
+                            <div className="border border-gray-200 shadow-lg p-4 sm:p-6 rounded-lg">
+                                <h2 className="text-xl font-semibold p-4 bg-sky-500 text-white rounded-t-lg mb-0">Personel Bilgileri</h2>
+                                <div className="p-4 bg-white rounded-b-lg">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-800">
+                                        <div className="p-3 bg-sky-50 rounded-md shadow-sm"><strong>Ad Soyad:</strong> {currentUser.profile.firstName} {currentUser.profile.lastName}</div>
+                                        <div className="p-3 bg-sky-50 rounded-md shadow-sm"><strong>Sicil No:</strong> {currentUser.personnelNumber}</div>
+                                        <div className="p-3 bg-sky-50 rounded-md shadow-sm"><strong>E-Mail:</strong> {currentUser.email}</div>
+                                        <div className="p-3 bg-sky-50 rounded-md shadow-sm"><strong>Telefon:</strong> {currentUser.profile.phone}</div>
+                                        <div className="p-3 bg-sky-50 rounded-md shadow-sm"><strong>Kurum:</strong> {currentUser.profile.company}</div>
+                                        <div className="p-3 bg-sky-50 rounded-md shadow-sm"><strong>Adres:</strong> {currentUser.profile.address}</div>
+                                        <div className="p-3 bg-sky-50 rounded-md shadow-sm"><strong>Yıllık İzin:</strong> {currentUser.profile.vac} GÜN</div>
+                                        <div className="p-3 bg-sky-50 rounded-md shadow-sm"><strong>Kadro/Derece:</strong> {currentUser.profile.kadro}</div>
+                                        <div className="p-3 bg-sky-50 rounded-md shadow-sm"><strong>İşe Başlama:</strong> {formatDate(currentUser.profile.startYear)}</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    {/* Personel ise tayin talebi bölümünü göster */}
                     {!isUserAdmin && (
                         <section className="my-8">
                             <div className="container mx-auto">
-                                <div className="border border-gray-200 shadow p-4 rounded">
-                                    <h2 className="text-xl p-4 bg-sky-500 text-white rounded mb-4">Talep Ekranı</h2>
-                                    <Link
-                                        to="/yeni-tayin-talebi"
-                                        className="px-4 py-2 inline-block bg-teal-700 transition hover:bg-teal-600 text-white rounded"
-                                    >
-                                        Tayin Talebinde Bulun!
-                                    </Link>
+                                <div className="border border-gray-200 shadow-lg p-4 sm:p-6 rounded-lg">
+                                    <h2 className="text-xl font-semibold p-4 bg-sky-500 text-white rounded-t-lg mb-0">Talep Oluştur</h2>
+                                    <div className="p-4 bg-white rounded-b-lg text-center">
+                                        <Link
+                                            to="/yeni-tayin-talebi"
+                                            className="px-6 py-3 inline-block bg-teal-600 transition hover:bg-teal-700 text-white font-semibold rounded-md shadow-md"
+                                        >
+                                            Yeni Tayin Talebinde Bulun
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         </section>
