@@ -9,16 +9,32 @@ const initialCurrentUser = {
     // ...diğer kullanıcı bilgileri
 };
 
-// API çağrıları için örnek fonksiyonlar (Kendi API yapınıza göre uyarlayın)
+
 const fetchCities = async () => {
-    // const response = await fetch('/api/cities');
-    // const data = await response.json();
-    // return data;
-    return [ // Örnek veri
-        { id: 6, name: 'Ankara' },
-        { id: 34, name: 'İstanbul' },
-        { id: 35, name: 'İzmir' },
-    ];
+    try {
+        const response = await fetch('http://localhost:5293/api/City/city');
+
+        if (!response.ok) {
+            // Yanıt başarılı değilse (örn. 404, 500), hata fırlat
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Şehirler çekilirken bir hata oluştu.');
+        }
+
+        const result = await response.json();
+
+        // CitiesModel yapısına göre Success ve Data kontrolü
+        if (result.success && result.data) {
+            // Data özelliği şehir adlarının bir listesi (List<string>)
+            return result.data;
+        } else {
+            // API'den gelen yanıtta başarı yoksa veya Data boşsa
+            throw new Error(result.message || 'Beklenmedik bir veri formatı veya boş veri.');
+        }
+
+    } catch (error) {
+        console.error("Şehirleri çekerken bir hata oluştu:", error);
+        throw error; // Hatayı çağırana ilet
+    }
 };
 
 const fetchUserTickets = async (userId) => {
