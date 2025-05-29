@@ -1,46 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import MainLayout from '../components/Layout/MainLayout'; // Ana layout bileşenimiz
-import { Link, useNavigate } from 'react-router-dom'; // Yönlendirme ve linkler için
+import MainLayout from '../components/Layout/MainLayout';
+import { Link, useNavigate } from 'react-router-dom';
 
-// Örnek kullanıcı ve veri yapısı (Gerçek uygulamada Auth Context veya Redux'tan gelir)
-// Bu, API'den giriş yapıldığında alınacak kullanıcı bilgisi varsayımıdır.
-const initialUser = {
-    id: null, // Kullanıcı ID'si
-    name: '', // Genellikle sicil no veya kullanıcı adı (Auth::user()->name gibi)
-    role: null, // 0: Personel, 1: Yönetici
-    profile: { // Personel detayları ($userDetail gibi)
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        company: '',
-        address: '',
-        vac: '', // Yıllık izin
-        kadro: '', // Kadro / Derece
-        startyear: '', // İşe başlama tarihi
-    },
-};
-
-// API çağrıları için örnek fonksiyonlar (Bunları kendi API yapınıza göre uyarlayın)
-const fetchAdminDashboardData = async () => {
-    // const ticketsResponse = await fetch('/api/admin/tickets');
-    // const usersResponse = await fetch('/api/users'); // Tüm kullanıcılar (dikkatli kullanılmalı)
-    // const citiesResponse = await fetch('/api/cities');
-    // const tickets = await ticketsResponse.json();
-    // const users = await usersResponse.json();
-    // const cities = await citiesResponse.json();
-    // return { tickets, users, cities };
+// API çağrısı için örnek fonksiyon (Admin için)
+const fetchAdminDashboardData = async (token) => {
+    // Bu fonksiyonu kendi API yapınıza göre doldurun
+    // Örnek:
+    // const response = await fetch('/api/admin/dashboard-summary', {
+    //     headers: { 'Authorization': `Bearer ${token}` }
+    // });
+    // if (!response.ok) throw new Error('Admin verileri alınamadı');
+    // return await response.json();
 
     // Şimdilik örnek veri:
     return {
         tickets: [
-            { id: 1, user_id: 2, changetype: 'İl İçi', city_id: 6, message: 'Ankara merkez birimlerine tayin talebi.', created_at: '2024-05-27 10:00:00' },
-            { id: 2, user_id: 3, changetype: 'İl Dışı', city_id: 34, message: 'İstanbul Adliyesi için tayin istiyorum.', created_at: '2024-05-26 14:30:00' },
+            { id: 1, user_id: 'guid-user-2', changetype: 'İl İçi', city_id: 6, message: 'Ankara merkez birimlerine tayin talebi.', created_at: '2024-05-27 10:00:00' },
+            { id: 2, user_id: 'guid-user-3', changetype: 'İl Dışı', city_id: 34, message: 'İstanbul Adliyesi için tayin istiyorum.', created_at: '2024-05-26 14:30:00' },
         ],
-        users: [
-            { id: 1, name: 'Yönetici Adı', sicil_no: '001' }, // Yönetici de bir kullanıcı olabilir
-            { id: 2, name: 'Ahmet Yılmaz', sicil_no: '1001' },
-            { id: 3, name: 'Ayşe Kaya', sicil_no: '1002' },
+        users: [ // Bu kullanıcı listesi adminin göreceği diğer kullanıcılar
+            { id: 'guid-admin-1', name: 'Yönetici Adı', sicil_no: '001' },
+            { id: 'guid-user-2', name: 'Ahmet Yılmaz', sicil_no: '1001' },
+            { id: 'guid-user-3', name: 'Ayşe Kaya', sicil_no: '1002' },
         ],
         cities: [
             { id: 6, name: 'Ankara' },
@@ -49,81 +30,83 @@ const fetchAdminDashboardData = async () => {
     };
 };
 
-const fetchPersonnelDashboardData = async (userId) => {
-    // const userDetailResponse = await fetch(`/api/user/${userId}/details`);
-    // const userDetail = await userDetailResponse.json();
-    // return userDetail;
-
-    // Şimdilik örnek veri (giriş yapan kullanıcıya göre):
-    // Bu veriler genellikle giriş yapıldığında gelen ana kullanıcı objesinde olur.
-    // Burada currentUser.profile kısmını kullanacağız.
-    return {}; // Ana kullanıcı objesinden alınacak
+// Giriş yapmış kullanıcının kendi bilgilerini getiren API çağrısı
+const fetchCurrentUserProfile = async (token) => {
+    const response = await fetch('http://localhost:5293/api/users/me', {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+    });
+    if (!response.ok) {
+        if (response.status === 401) {
+            // Yetkisiz erişim, token geçersiz olabilir
+            throw new Error('Unauthorized');
+        }
+        const errorData = await response.json().catch(() => ({ message: 'Profil bilgileri alınırken bir hata oluştu.' }));
+        throw new Error(errorData.message || 'Profil bilgileri alınamadı.');
+    }
+    return await response.json();
 };
 
 
 function DashboardPage() {
-    // Bu 'currentUser' normalde bir AuthContext'ten veya Redux store'dan gelir.
-    // Örnek olarak burada tanımlıyoruz, giriş yapıldığında bu bilgi set edilmeli.
-    const [currentUser, setCurrentUser] = useState({
-        id: 2, // Giriş yapmış kullanıcının ID'si
-        name: '1001', // Giriş yapmış kullanıcının sicil numarası (Auth::user()->name)
-        role: 0, // 0: Personel, 1: Yönetici (Giriş yapmış kullanıcının rolü)
-        profile: { // Personel detayları ($userDetail)
-            firstName: 'Ahmet',
-            lastName: 'Yılmaz',
-            email: 'ahmet.yilmaz@example.com',
-            phone: '5551112233',
-            company: 'Adalet Bakanlığı - Ankara Adliyesi',
-            address: 'Ankara, Türkiye',
-            vac: '20 gün',
-            kadro: 'Zabıt Katibi / 3. Derece',
-            startyear: '2015-03-10',
-        }
-    });
-
+    const [currentUser, setCurrentUser] = useState(null); // Başlangıçta null
     const [adminData, setAdminData] = useState({ tickets: [], users: [], cities: [] });
-    // Personel detayları zaten currentUser.profile içinde olduğundan ayrı bir state'e gerek olmayabilir.
-    // Eğer API'den ayrı çekiliyorsa: const [personnelDetails, setPersonnelDetails] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.log('Token bulunamadı, giriş sayfasına yönlendiriliyor.');
+            navigate('/'); // Token yoksa giriş sayfasına yönlendir
+            return;
+        }
+
         const loadData = async () => {
             setIsLoading(true);
             setError(null);
             try {
-                if (currentUser && currentUser.role === 1) { // Yönetici
-                    const data = await fetchAdminDashboardData();
+                const userProfileData = await fetchCurrentUserProfile(token);
+                setCurrentUser(userProfileData); // API'den gelen kullanıcı bilgisi
+
+                // API'den gelen rol string ("Admin", "Personel")
+                // Frontend'de rolü 0 ve 1 olarak kullanıyorsanız burada dönüşüm yapabilirsiniz
+                // Veya API'nin sayısal rol dönmesini sağlayabilirsiniz.
+                // Şimdilik API'den gelen string role göre kontrol yapalım.
+                if (userProfileData.role === 'Admin') {
+                    const data = await fetchAdminDashboardData(token);
                     setAdminData(data);
-                } else if (currentUser && currentUser.role === 0) { // Personel
-                    // Personel detayları zaten `currentUser.profile` içinde varsayılıyor.
-                    // Eğer API'den ayrı çekilecekse:
-                    // const data = await fetchPersonnelDashboardData(currentUser.id);
-                    // setPersonnelDetails(data); // Eğer ayrı state kullanılıyorsa
                 }
+                // Personel için ek bir veri çekmeye gerek yok, userProfileData zaten kendi bilgileri.
+
             } catch (err) {
-                setError('Veriler yüklenirken bir hata oluştu.');
-                console.error(err);
+                if (err.message === 'Unauthorized') {
+                    console.error('Yetkisiz erişim veya token geçersiz. Çıkış yapılıyor ve giriş sayfasına yönlendiriliyor.');
+                    localStorage.removeItem('authToken');
+                    navigate('/');
+                } else {
+                    setError(err.message || 'Veriler yüklenirken bir hata oluştu.');
+                    console.error(err);
+                }
             } finally {
                 setIsLoading(false);
             }
         };
 
-        if (currentUser && currentUser.id) {
-            loadData();
-        } else {
-            setIsLoading(false);
-        }
-    }, [currentUser]); // currentUser değiştiğinde (örn. login/logout) tekrar veri çek.
+        loadData();
+    }, [navigate]); // navigate dependency array'de olmalı
 
     const handleLogout = async () => {
         console.log('Çıkış yapılıyor...');
-
         const token = localStorage.getItem('authToken');
+
         if (token) {
             try {
-                const response = await fetch('http://localhost:5293/api/auth/logout', {
+                const response = await fetch('http://localhost:5293/api/auth/logout', { // API adresinizi doğrulayın
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -137,21 +120,22 @@ function DashboardPage() {
                     console.log(data.message || 'Sunucu tarafı çıkış başarılı.');
                 } else {
                     console.error('Sunucu tarafı çıkış işlemi başarısız oldu. Durum:', response.status);
+                    // Hata olsa bile istemci tarafı temizliği yap
                 }
             } catch (error) {
                 console.error('Logout API çağrısı sırasında bir ağ hatası veya başka bir sorun oluştu:', error);
+                // Hata olsa bile istemci tarafı temizliği yap
             }
         } else {
             console.log('Saklanmış bir token bulunamadı, sadece istemci tarafı çıkış yapılıyor.');
         }
 
         localStorage.removeItem('authToken');
+        setCurrentUser(null); // Kullanıcı state'ini temizle
         console.log('İstemci tarafı temizlik tamamlandı.');
-
-        navigate('/');
+        navigate('/'); // Ana sayfaya veya giriş sayfasına yönlendir
     };
 
-    // Veri yüklenirken veya kullanıcı yoksa gösterilecek içerik
     if (isLoading) {
         return (
             <MainLayout pageTitle="Yükleniyor...">
@@ -160,60 +144,82 @@ function DashboardPage() {
         );
     }
 
-    if (error) {
+    // currentUser yüklenmeden önce hata oluştuysa veya kullanıcı yoksa (useEffect yönlendirmesi sonrası bir anlık durum)
+    if (error && !currentUser) {
         return (
             <MainLayout pageTitle="Hata">
-                <div className="container mx-auto text-center py-20 text-red-500">{error}</div>
-            </MainLayout>
-        );
-    }
-
-    if (!currentUser || currentUser.id === null) {
-        // Bu durum normalde Router'da PrivateRoute/AuthGuard ile yönetilir.
-        // Kullanıcı yoksa ve yükleme bittiyse (örn. doğrudan bu sayfaya gelindiyse)
-        // Login'e yönlendirme useEffect içinde yapılabilir veya burada bir mesaj gösterilebilir.
-        return (
-            <MainLayout pageTitle="Giriş Gerekli">
-                <div className="container mx-auto text-center py-20">
-                    Bu sayfayı görüntülemek için lütfen <Link to="/giris" className="text-sky-600 hover:underline">giriş yapın</Link>.
+                <div className="container mx-auto text-center py-20 text-red-500">
+                    {error} Lütfen <Link to="/" className="text-sky-600 hover:underline">tekrar giriş yapmayı</Link> deneyin.
                 </div>
             </MainLayout>
         );
     }
 
+    // currentUser null ise (henüz yüklenmemiş veya yüklenememişse ve token yoksa useEffect zaten yönlendirir)
+    // Bu kontrol genellikle AuthContext ile daha merkezi yönetilir.
+    if (!currentUser) {
+        // Bu durum, token var ama kullanıcı bilgisi çekilemediyse veya
+        // useEffect içindeki navigate('/') henüz render döngüsünü tamamlamadıysa görülebilir.
+        // Genellikle isLoading true iken bu bloğa girilmez.
+        return (
+            <MainLayout pageTitle="Giriş Gerekli">
+                <div className="container mx-auto text-center py-20">
+                    Bu sayfayı görüntülemek için lütfen <Link to="/" className="text-sky-600 hover:underline">giriş yapın</Link>.
+                </div>
+            </MainLayout>
+        );
+    }
 
-    // Kullanıcı adı ve şehir adlarını bulmak için yardımcı fonksiyonlar (Admin tablosu için)
-    // Not: Büyük veri setlerinde bu yaklaşım performanssız olabilir.
-    // Backend'den verinin ilişkili isimlerle gelmesi veya frontend'de map oluşturmak daha iyi olur.
+    // Hata varsa ve kullanıcı bilgisi de varsa (örneğin admin verisi çekilirken hata oldu)
+    if (error && currentUser) {
+        // Sadece admin verisi çekilirken hata olduysa, personel kendi bilgilerini görebilir.
+        // Bu durumu daha spesifik yönetmek isteyebilirsiniz.
+        // Şimdilik genel bir hata mesajı gösterelim.
+        console.warn("Veri yükleme hatası (currentUser mevcut):", error);
+    }
+
+
+    // Admin tablosu için yardımcı fonksiyonlar (API'den gelen user_id string ise ona göre ayarlandı)
     const getUserNameById = (userId) => {
-        const user = adminData.users.find(u => u.id === userId);
+        if (!adminData || !adminData.users) return 'Bilinmeyen Kullanıcı';
+        const user = adminData.users.find(u => u.id === userId); // API'den gelen user_id string ise === ile karşılaştır
         return user ? user.name : 'Bilinmeyen Kullanıcı';
     };
 
     const getCityNameById = (cityId) => {
+        if (!adminData || !adminData.cities) return 'Bilinmeyen Şehir';
         const city = adminData.cities.find(c => c.id === cityId);
         return city ? city.name : 'Bilinmeyen Şehir';
     };
 
-    // Tarih formatlama
     const formatDate = (dateString) => {
         if (!dateString) return '';
         try {
             const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            // API'den gelen tarih "yyyy-MM-dd" formatında ise saat bilgisi olmaz.
+            // Eğer saat bilgisi de varsa ve farklı formatta geliyorsa new Date() parse etmeyebilir.
+            // Sadece tarih için:
+            if (dateString.length === 10) { // "yyyy-MM-dd"
+                const dateOnlyOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+                return new Date(dateString + 'T00:00:00').toLocaleDateString('tr-TR', dateOnlyOptions); // Saat ekleyerek parse et
+            }
             return new Date(dateString).toLocaleDateString('tr-TR', options);
         } catch (e) {
-            return dateString; // Hata durumunda orijinal string'i dön
+            console.error("Tarih formatlama hatası:", e, "Gelen değer:", dateString);
+            return dateString;
         }
     };
 
+    // Rol kontrolü API'den gelen string değere göre yapılıyor
+    const isUserAdmin = currentUser.role === 'Admin';
 
     return (
-        <MainLayout pageTitle={currentUser.role === 1 ? 'Yönetici Paneli' : 'Kişisel Bilgilerim'}>
+        <MainLayout pageTitle={isUserAdmin ? 'Yönetici Paneli' : 'Kişisel Bilgilerim'}>
             <section className="bg-sky-800 py-4 px-4 lg:px-0">
                 <div className="container mx-auto">
                     <div className="flex flex-row items-center justify-between">
                         <h1 className="text-white text-2xl">
-                            {currentUser.role === 1 ? 'Yönetici Ekranı' : 'Personel Ekranı'}
+                            {isUserAdmin ? `Yönetici Ekranı (${currentUser.profile?.firstName || currentUser.personnelNumber})` : `Personel Ekranı (${currentUser.profile?.firstName || currentUser.personnelNumber})`}
                         </h1>
                         <button
                             onClick={handleLogout}
@@ -225,10 +231,11 @@ function DashboardPage() {
                 </div>
             </section>
 
-            {/* Yönetici İçeriği (role == 1) */}
-            {currentUser.role === 1 && (
+            {/* Yönetici İçeriği */}
+            {isUserAdmin && (
                 <section className="my-8">
                     <div className="container mx-auto">
+                        {error && adminData.tickets.length === 0 && <div className="text-red-500 p-4 bg-red-100 rounded mb-4">Admin verileri yüklenirken hata oluştu: {error}</div>}
                         <div className="border border-gray-200 shadow p-4 rounded">
                             <h2 className="text-xl p-4 bg-sky-600 text-white rounded mb-4">Tüm Tayin Talepleri</h2>
                             <div className="overflow-x-auto shadow-md sm:rounded-lg">
@@ -280,14 +287,14 @@ function DashboardPage() {
                 </section>
             )}
 
-            {/* Personel İçeriği (role == 0) */}
-            {currentUser.role === 0 && currentUser.profile && (
+            {/* Personel İçeriği (Her zaman gösterilir, çünkü currentUser kendi bilgileridir) */}
+            {currentUser.profile && ( // currentUser.profile API'den geliyorsa kontrol et
                 <>
                     <section className="my-8">
                         <div className="container mx-auto">
                             <div className="border border-gray-200 shadow p-4 rounded">
                                 <h2 className="text-xl p-4 bg-sky-500 text-white rounded mb-4">Personel Bilgileri</h2>
-                                <div className="flex flex-row flex-wrap -m-2 text-gray-800"> {/* Negatif margin ile p-2'leri dengeler */}
+                                <div className="flex flex-row flex-wrap -m-2 text-gray-800">
                                     <div className="w-full md:w-1/2 p-2">
                                         <div className="px-4 py-3 bg-sky-100 rounded h-full">
                                             <strong>Ad Soyad:</strong> {currentUser.profile.firstName} {currentUser.profile.lastName}
@@ -295,12 +302,12 @@ function DashboardPage() {
                                     </div>
                                     <div className="w-full md:w-1/2 p-2">
                                         <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>Sicil No:</strong> {currentUser.name} {/* Auth::user()->name Blade'de sicil no idi */}
+                                            <strong>Sicil No:</strong> {currentUser.personnelNumber}
                                         </div>
                                     </div>
                                     <div className="w-full md:w-1/2 p-2">
                                         <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>E-Mail:</strong> {currentUser.profile.email}
+                                            <strong>E-Mail:</strong> {currentUser.email}
                                         </div>
                                     </div>
                                     <div className="w-full md:w-1/2 p-2">
@@ -330,7 +337,7 @@ function DashboardPage() {
                                     </div>
                                     <div className="w-full md:w-1/2 p-2">
                                         <div className="px-4 py-3 bg-sky-100 rounded h-full">
-                                            <strong>İşe Başlama Tarihi:</strong> {formatDate(currentUser.profile.startyear)}
+                                            <strong>İşe Başlama Tarihi:</strong> {formatDate(currentUser.profile.startYear)}
                                         </div>
                                     </div>
                                 </div>
@@ -338,19 +345,22 @@ function DashboardPage() {
                         </div>
                     </section>
 
-                    <section className="my-8">
-                        <div className="container mx-auto">
-                            <div className="border border-gray-200 shadow p-4 rounded">
-                                <h2 className="text-xl p-4 bg-sky-500 text-white rounded mb-4">Talep Ekranı</h2>
-                                <Link
-                                    to="/yeni-tayin-talebi" // Bu yolun React Router'da tanımlı olması gerekir
-                                    className="px-4 py-2 inline-block bg-teal-700 transition hover:bg-teal-600 text-white rounded"
-                                >
-                                    Tayin Talebinde Bulun!
-                                </Link>
+                    {/* Personel ise tayin talebi bölümünü göster */}
+                    {!isUserAdmin && (
+                        <section className="my-8">
+                            <div className="container mx-auto">
+                                <div className="border border-gray-200 shadow p-4 rounded">
+                                    <h2 className="text-xl p-4 bg-sky-500 text-white rounded mb-4">Talep Ekranı</h2>
+                                    <Link
+                                        to="/yeni-tayin-talebi"
+                                        className="px-4 py-2 inline-block bg-teal-700 transition hover:bg-teal-600 text-white rounded"
+                                    >
+                                        Tayin Talebinde Bulun!
+                                    </Link>
+                                </div>
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    )}
                 </>
             )}
         </MainLayout>
