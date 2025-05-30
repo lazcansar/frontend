@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MainLayout from '../components/Layout/MainLayout';
 import { Link, useNavigate } from 'react-router-dom';
 
-// DashboardPage.js'den kopyalanan veya ortak bir API modülünden import edilen fonksiyon
+
 const fetchCurrentUserProfile = async (token) => {
     const response = await fetch('http://localhost:5293/api/users/me', {
         headers: {
@@ -24,14 +24,14 @@ const fetchCurrentUserProfile = async (token) => {
 
 const fetchCities = async () => {
     try {
-        const response = await fetch('http://localhost:5293/api/City/city'); // Endpoint'i doğrulayın
+        const response = await fetch('http://localhost:5293/api/City/city');
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: 'Şehirler çekilirken API hatası.'}));
             throw new Error(errorData.message || 'Şehirler çekilirken bir hata oluştu.');
         }
         const result = await response.json();
-        if (result.success && Array.isArray(result.data)) { // Array.isArray kontrolü eklendi
-            return result.data; // API'niz { id: 1, name: 'Ankara' } gibi objeler içeren bir dizi döndürmeli
+        if (result.success && Array.isArray(result.data)) {
+            return result.data;
         } else {
             throw new Error(result.message || 'Şehir verileri beklenen formatta değil veya boş.');
         }
@@ -42,11 +42,10 @@ const fetchCities = async () => {
 };
 
 const fetchUserTickets = async (userId, token) => {
-    // Gerçek API çağrısı
-    // API endpoint'inizin /api/tickets/user/{userId} olduğunu varsayıyoruz
+
     const response = await fetch(`http://localhost:5293/api/tickets/user/${userId}`, { // API adresinizi kontrol edin
         headers: {
-            'Authorization': `Bearer ${token}`, // Token gerekiyorsa
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
         }
     });
@@ -60,63 +59,59 @@ const fetchUserTickets = async (userId, token) => {
         throw new Error(errorData.message || 'Geçmiş talepler çekilirken bir hata oluştu.');
     }
     const result = await response.json();
-    // API'den gelen data'nın TicketDto[] formatında olduğunu varsayıyoruz.
-    // TicketsController'ınız { success: true, data: [...], message: "..." } şeklinde bir yapı döndürüyor.
+
     if (result.success && Array.isArray(result.data)) {
         return result.data;
     } else {
-        // Eğer result.data null veya undefined ise boş dizi döndür,
-        // değilse ve array değilse veya success false ise hata fırlat.
+
         if (result.data === null || typeof result.data === 'undefined') return [];
         throw new Error(result.message || 'Geçmiş talep verileri beklenen formatta değil.');
     }
 };
 
 const submitTicket = async (ticketData, token) => {
-    // Gerçek API çağrısı
-    // API endpoint'inizin /api/tickets olduğunu varsayıyoruz
-    const response = await fetch('http://localhost:5293/api/tickets', { // API adresinizi kontrol edin
+
+    const response = await fetch('http://localhost:5293/api/tickets', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${token}`, // Token gerekiyorsa
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(ticketData), // ticketData'yı JSON string'ine çevir
+        body: JSON.stringify(ticketData),
     });
 
     if (!response.ok) {
-        // API'den gelen hata mesajını yakalamaya çalış
+
         let errorResponseData = { message: 'Talep gönderilemedi.' };
         try {
             errorResponseData = await response.json();
         } catch (e) {
             console.error("Talep gönderme API yanıtı JSON formatında değil veya parse edilemedi.", e);
         }
-        // errorResponseData.errors API'den gelen validasyon hatalarını içerebilir
-        // (örn: ASP.NET Core ModelState hataları)
+
         const error = new Error(errorResponseData.message || 'Talep gönderilirken bir sunucu hatası oluştu.');
         if (errorResponseData.errors) {
-            error.errors = errorResponseData.errors; // Validasyon hatalarını error objesine ekle
+            error.errors = errorResponseData.errors;
         }
         throw error;
     }
-    return await response.json(); // Başarılı yanıtı JSON olarak parse et
+    return await response.json();
 };
 
 
 function CreateTicketPage() {
-    const [currentUser, setCurrentUser] = useState(null); // Başlangıçta null
+    const [currentUser, setCurrentUser] = useState(null);
     const navigate = useNavigate();
 
     const [changeType, setChangeType] = useState('');
-    const [selectedCity, setSelectedCity] = useState(''); // Şehir ID'sini tutacak
+    const [selectedCity, setSelectedCity] = useState('');
     const [message, setMessage] = useState('');
 
-    const [cities, setCities] = useState([]); // {id: 1, name: "Ankara"} formatında olacak
+    const [cities, setCities] = useState([]);
     const [userTickets, setUserTickets] = useState([]);
 
-    const [pageLoading, setPageLoading] = useState(true); // Sayfa genel yükleme durumu
-    const [dataLoadingError, setDataLoadingError] = useState(null); // Veri yükleme hataları için
+    const [pageLoading, setPageLoading] = useState(true);
+    const [dataLoadingError, setDataLoadingError] = useState(null);
     const [formLoading, setFormLoading] = useState(false);
     const [formSuccess, setFormSuccess] = useState('');
     const [formErrors, setFormErrors] = useState([]);
@@ -134,16 +129,15 @@ function CreateTicketPage() {
             setDataLoadingError(null);
             try {
                 const userProfileData = await fetchCurrentUserProfile(token);
-                setCurrentUser(userProfileData); // API'den gelen kullanıcı bilgisi
+                setCurrentUser(userProfileData);
 
-                // userProfileData yüklendikten sonra ID'sini kullanarak diğer verileri çek
                 if (userProfileData && userProfileData.id) {
                     const [citiesData, ticketsData] = await Promise.all([
-                        fetchCities(), // Token gerektirmiyorsa
-                        fetchUserTickets(userProfileData.id, token) // Token gerektiriyorsa
+                        fetchCities(),
+                        fetchUserTickets(userProfileData.id, token)
                     ]);
-                    setCities(citiesData || []); // Gelen veri null/undefined ise boş dizi
-                    setUserTickets(ticketsData || []); // Gelen veri null/undefined ise boş dizi
+                    setCities(citiesData || []);
+                    setUserTickets(ticketsData || []);
                 } else {
                     throw new Error("Kullanıcı profili ID'si alınamadı.");
                 }
@@ -166,7 +160,7 @@ function CreateTicketPage() {
     }, [navigate]);
 
 
-    const handleLogout = async () => { // Logout fonksiyonunu DashboardPage'den alabilir veya ortak yapabilirsiniz
+    const handleLogout = async () => {
         console.log('Çıkış yapılıyor...');
         const token = localStorage.getItem('authToken');
         if (token) {
@@ -212,7 +206,6 @@ function CreateTicketPage() {
         }
 
         try {
-            // API'niz city_id'yi integer bekliyorsa:
             const cityIdAsInt = parseInt(selectedCity, 10);
             if (isNaN(cityIdAsInt)) {
                 setFormErrors(['Geçerli bir şehir seçilmedi.']);
@@ -221,26 +214,24 @@ function CreateTicketPage() {
             }
 
             const response = await submitTicket({
-                // API'nizin beklediği alan adlarına göre düzenleyin
-                // Örneğin ApplicationUserId, UserId, PersonnelId vb.
-                userId: currentUser.id, // Veya API'niz token'dan kendi çıkarıyorsa bu gerekmeyebilir
-                changeType: changeType, // API'nizdeki alan adı
-                cityId: cityIdAsInt,    // API'nizdeki alan adı
-                requestMessage: message // API'nizdeki alan adı
+                userId: currentUser.id,
+                changeType: changeType,
+                cityId: cityIdAsInt,
+                requestMessage: message
             }, token);
 
             setFormSuccess(response.message || 'Talep başarıyla gönderildi!');
             setChangeType('');
             setSelectedCity('');
             setMessage('');
-            // Geçmiş talepleri yeniden yükle
+
             if (currentUser && currentUser.id) {
                 const ticketsData = await fetchUserTickets(currentUser.id, token);
                 setUserTickets(ticketsData || []);
             }
         } catch (error) {
             console.error("Talep gönderme hatası:", error);
-            if (error.errors) { // API'den gelen validasyon hataları için
+            if (error.errors) {
                 setFormErrors(Object.values(error.errors).flat());
             } else if (error.message) {
                 setFormErrors([error.message]);
@@ -252,9 +243,9 @@ function CreateTicketPage() {
         }
     };
 
-    // Bu fonksiyon artık cities state'ini kullanıyor, [{id:1, name:"Ankara"}, ...]
+
     const getCityNameById = (cityId) => {
-        // cityId string gelebilir (select value'dan), integer'a çevir
+
         const idToFind = parseInt(cityId, 10);
         const city = cities.find(c => c.id === idToFind);
         return city ? city.name : 'Bilinmiyor';
@@ -289,7 +280,7 @@ function CreateTicketPage() {
         );
     }
 
-    if (!currentUser) { // currentUser hala null ise (hata olmadı ama yüklenemedi gibi bir durum, nadir)
+    if (!currentUser) {
         return (
             <MainLayout pageTitle="Giriş Gerekli">
                 <div className="container mx-auto text-center py-20">
@@ -305,7 +296,7 @@ function CreateTicketPage() {
             <section className="bg-sky-800 py-4 px-4 lg:px-0">
                 <div className="container mx-auto">
                     <div className="flex flex-row items-center justify-between">
-                        {/* currentUser.profile.firstName veya currentUser.personnelNumber API'den gelen yanıta göre güncellenmeli */}
+
                         <h1 className="text-white text-2xl">
                             Personel Ekranı ({currentUser.profile?.firstName || currentUser.personnelNumber || 'Kullanıcı'}) - Tayin Talebi
                         </h1>
@@ -319,7 +310,7 @@ function CreateTicketPage() {
                 </div>
             </section>
 
-            {/* Breadcrumb kısmı aynı kalabilir */}
+
             <section className="bg-teal-100">
                 <div className="container mx-auto py-3 px-4 lg:px-0">
                     <nav aria-label="breadcrumb" className="font-medium text-gray-600 text-sm">
@@ -421,7 +412,7 @@ function CreateTicketPage() {
                 </div>
             </section>
 
-            {/* Geçmiş talepler bölümü aynı kalabilir, getCityNameById güncellendiği için doğru çalışacaktır */}
+
             <section className="my-8">
                 <div className="container mx-auto px-4 lg:px-0">
                     <div className="border border-gray-200 shadow-lg p-4 sm:p-6 rounded">

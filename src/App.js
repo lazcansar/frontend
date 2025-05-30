@@ -10,7 +10,7 @@ function App() {
         <Router>
             <Routes>
                 <Route
-                    path="/" // LoginPage URL
+                    path="/"
                     element={<LoginPage />}
                 />
                 <Route path="/personel-ekrani" element={<IndexPage />}

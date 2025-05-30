@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import MainLayout from '../components/Layout/MainLayout';
 import {Link, useNavigate}from 'react-router-dom';
 
-// Şehirleri getiren fonksiyon
+// Get All Cities
 const fetchCities = async (token) => {
     try {
         const headers = {
@@ -29,7 +29,7 @@ const fetchCities = async (token) => {
     }
 };
 
-// Sadece tüm biletleri getiren fonksiyon
+// Get All Change Ticket
 const fetchAllTicketsForAdmin = async (token) => {
     const response = await fetch('http://localhost:5293/api/tickets/admin/all', {
         headers: {
@@ -61,7 +61,7 @@ const fetchAllTicketsForAdmin = async (token) => {
     }
 };
 
-// Tüm kullanıcıları getiren fonksiyon (API'ye bağlandı)
+// Get All Users
 const fetchAllUsersForAdmin = async (token) => {
     const response = await fetch('http://localhost:5293/api/users/admin/all', { // API endpoint'i
         headers: {
@@ -73,7 +73,7 @@ const fetchAllUsersForAdmin = async (token) => {
 
     if (!response.ok) {
         if (response.status === 401) {
-            throw new Error('Unauthorized'); // Yetkisiz erişim
+            throw new Error('Unauthorized');
         }
         let errorData = { message: 'Kullanıcı listesi alınamadı.' };
         try {
@@ -84,11 +84,9 @@ const fetchAllUsersForAdmin = async (token) => {
         throw new Error(errorData.message || 'Kullanıcı listesi çekilirken bir hata oluştu.');
     }
 
-    const result = await response.json(); // API'den { success: true, data: [userProfileDtos_array] } bekleniyor
+    const result = await response.json();
 
     if (result.success && Array.isArray(result.data)) {
-        // API'den gelen userProfileDto'lar, user.id, user.profile.firstName, user.profile.lastName
-        // ve user.personnelNumber (sicilNo için) gibi alanları içermelidir.
         return result.data;
     } else {
         throw new Error(result.message || 'Kullanıcı verileri beklenen formatta değil.');
@@ -96,7 +94,7 @@ const fetchAllUsersForAdmin = async (token) => {
 };
 
 
-// Giriş yapmış kullanıcının kendi bilgilerini getiren API çağrısı
+// Get Login User Profile
 const fetchCurrentUserProfile = async (token) => {
     const response = await fetch('http://localhost:5293/api/users/me', {
         headers: {
@@ -142,13 +140,13 @@ function DashboardPage() {
                     const [ticketsData, citiesData, usersData] = await Promise.all([
                         fetchAllTicketsForAdmin(token),
                         fetchCities(token),
-                        fetchAllUsersForAdmin(token)    // Artık API'den gerçek kullanıcıları çekecek
+                        fetchAllUsersForAdmin(token)
                     ]);
 
                     setAdminData({
                         tickets: ticketsData || [],
                         cities: citiesData || [],
-                        users: usersData || [] // API'den gelen kullanıcı listesi
+                        users: usersData || []
                     });
                 }
             } catch (err) {
@@ -240,21 +238,12 @@ function DashboardPage() {
         if (!adminData || !adminData.users || adminData.users.length === 0) return 'Bilinmeyen Kullanıcı';
         const user = adminData.users.find(u => u.id === userId);
         if (user) {
-            // API'den gelen UserProfileDto'da Profile.FirstName ve Profile.LastName var.
-            // user.name alanı olmayabilir, bu yüzden profile içinden alıyoruz.
             if (user.profile && user.profile.firstName) {
                 return `${user.profile.firstName} ${user.profile.lastName || ''}`.trim();
             }
-            // Eğer API'den gelen UserProfileDto'da doğrudan 'name' alanı varsa (fetchAllUsersForAdmin mock'taki gibi)
-            // ve 'profile' yoksa veya boşsa, bunu kullanabiliriz.
-            // Ancak API'miz UserProfileDto döndürdüğü için 'profile' içinden almak daha tutarlı.
-            // if (user.name && user.name.trim() !== '') return user.name;
-
-            // Fallback olarak sicil numarası (personnelNumber) veya kullanıcı adı (userName) gösterilebilir.
-            // API'niz UserProfileDto'da personnelNumber alanını sicil no için kullanıyor.
             if (user.personnelNumber) return user.personnelNumber;
 
-            return `Kullanıcı (${userId.substring(0, 6)}...)`; // Son çare
+            return `Kullanıcı (${userId.substring(0, 6)}...)`;
         }
         return `Bilinmeyen Kullanıcı (${userId.substring(0, 6)}...)`;
     };
@@ -339,7 +328,6 @@ function DashboardPage() {
                                         adminData.tickets.map((ticket) => (
                                             <tr key={ticket.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    {/* Kullanıcı adını göstermek için getUserNameById kullanılıyor */}
                                                     <div className="text-sm text-gray-900 capitalize">{getUserNameById(ticket.user_id)}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">

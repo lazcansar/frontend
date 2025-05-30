@@ -8,7 +8,6 @@ const MainLayout = ({ children, pageTitle = "Sayfa Başlığı", pageDescription
     useEffect(() => {
         document.title = `${pageTitle} - Personel Tayin Talebi Uygulaması`;
 
-        // Basit meta description ayarı (Örnek - react-helmet-async daha iyi bir çözümdür)
         let descriptionMeta = document.querySelector('meta[name="description"]');
         if (!descriptionMeta) {
             descriptionMeta = document.createElement('meta');
@@ -31,7 +30,7 @@ const MainLayout = ({ children, pageTitle = "Sayfa Başlığı", pageDescription
                                     alt="Adalet Bakanlığı"
                                     style={{ height: '75px' }}
                                 />
-                                {/* React Router kullanıyorsanız <Link to="/"> kullanın */}
+
                                 <Link to="/">
                                     <h1 className="text-3xl text-red-600 font-semibold">Personel Genel Müdürlüğü</h1>
                                 </Link>
